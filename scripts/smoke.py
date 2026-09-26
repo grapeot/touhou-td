@@ -14,6 +14,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SHOTS = ROOT / "shots"
 
 
+class Server(http.server.ThreadingHTTPServer):
+    request_queue_size = 64
+
+
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -21,7 +25,7 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
 
 def serve():
     handler = functools.partial(Quiet, directory=str(ROOT))
-    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    httpd = Server(("127.0.0.1", 0), handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd
 

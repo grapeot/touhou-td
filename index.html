@@ -17,7 +17,10 @@
     padding: 10px 18px; background: linear-gradient(#140d14e0, #140d1400); font-size: 26px; pointer-events: none; }
   .hud b { color: #ffd76a; font-size: 30px; }
   .hud .spacer { flex: 1; }
-  .hud button { pointer-events: auto; }
+  .hud button, .hud .gh { pointer-events: auto; }
+  .gh { color: #fff8ee; opacity: .75; display: flex; align-items: center; }
+  .gh:hover { opacity: 1; color: #ffd76a; }
+  .overlay .src { font-size: 18px; color: #d9a441; }
   button { font: inherit; color: var(--paper); background: #3a1f2cdd; border: 2px solid #d9a441; border-radius: 10px;
     padding: 6px 16px; cursor: pointer; font-size: 22px; }
   button:hover:not(:disabled) { background: #5a2a3c; }
@@ -71,6 +74,7 @@
     <button id="mute">♪</button>
     <button id="pause">⏸</button>
     <button id="next">开始下一波 ␣</button>
+    <a class="gh" href="https://github.com/grapeot/touhou-td" target="_blank" rel="noopener" title="源代码（GitHub）"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
   </div>
   <div class="dock">
     <div class="card" data-type="reimu"><span class="key">1</span><img src="assets/reimu_chibi.png"><div>灵梦 <span class="cost"></span></div></div>
@@ -91,6 +95,7 @@
     <p>妖精们冲着赛钱箱来了。在石台上安排灵梦、魔理沙和咲夜守住参道。<br>
        波次中点右下角头像发动符卡。坚持十波，最后会有一只自称最强的冰之妖精。</p>
     <button id="start">开始</button>
+    <a class="src" href="https://github.com/grapeot/touhou-td" target="_blank" rel="noopener">源代码 · GitHub</a>
   </div>
   <div class="hidden" id="pauseOverlay"><b>暂停中</b>　可以照常摆塔、升级　点 ▶ 或按 P 继续</div>
   <div class="overlay hidden" id="end">
