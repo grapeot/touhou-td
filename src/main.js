@@ -61,16 +61,27 @@ function reset() {
 }
 
 // ---------------------------------------------------------------- layout scaling
+// Scale the fixed 1536x864 stage into the safe area (inside the iPhone notch and home
+// indicator). iOS can report stale sizes right after rotation, so also re-check every frame.
+let lastBox = '';
 function fit() {
-  const s = Math.min(innerWidth / 1536, innerHeight / 864);
-  $('wrap').style.transform = `scale(${s}) translate(-50%, -50%)`;
-  $('wrap').style.transformOrigin = '0 0';
-  $('wrap').style.left = `${(innerWidth - 1536 * s) / 2}px`;
-  $('wrap').style.top = `${(innerHeight - 864 * s) / 2}px`;
-  $('wrap').style.transform = `scale(${s})`;
-  fit.scale = s;
+  const r = $('safe').getBoundingClientRect();
+  const w = r.width || innerWidth, h = r.height || innerHeight;
+  const s = Math.min(w / 1536, h / 864);
+  const wrap = $('wrap');
+  wrap.style.transformOrigin = '0 0';
+  wrap.style.transform = `scale(${s})`;
+  wrap.style.left = `${r.left + (w - 1536 * s) / 2}px`;
+  wrap.style.top = `${r.top + (h - 864 * s) / 2}px`;
+  lastBox = `${r.left},${r.top},${w},${h}`;
+}
+function refitIfChanged() {
+  const r = $('safe').getBoundingClientRect();
+  if (`${r.left},${r.top},${r.width || innerWidth},${r.height || innerHeight}` !== lastBox) fit();
 }
 addEventListener('resize', fit);
+addEventListener('orientationchange', () => setTimeout(fit, 300));
+window.visualViewport?.addEventListener('resize', fit);
 fit();
 
 function toGame(ev) {
@@ -464,6 +475,7 @@ function frame(now) {
   drawBossDanmaku(vis);
   render(vis * scale);
   updateHud();
+  refitIfChanged();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

@@ -55,6 +55,10 @@
   #pauseOverlay { position: absolute; left: 50%; top: 110px; transform: translateX(-50%); pointer-events: none;
     background: #140d14cc; border: 2px solid #d9a441; border-radius: 12px; padding: 10px 22px; font-size: 22px; }
   #pauseOverlay b { color: #ffd76a; font-size: 28px; }
+  /* Usable area inside the notch / rounded corners / home indicator; the game is scaled to fit it. */
+  #safe { position: fixed; pointer-events: none; visibility: hidden;
+    left: env(safe-area-inset-left, 0px); right: env(safe-area-inset-right, 0px);
+    top: env(safe-area-inset-top, 0px); bottom: env(safe-area-inset-bottom, 0px); }
   .hidden { display: none !important; }
   #rotate { display: none; position: fixed; inset: 0; z-index: 9; background: #140d14; color: #fff8ee; font-size: 22px;
     align-items: center; justify-content: center; text-align: center; padding: 24px; }
@@ -62,6 +66,7 @@
 </style>
 </head>
 <body>
+<div id="safe"></div>
 <div id="rotate">请把手机横过来玩 ↻</div>
 <div id="wrap">
   <canvas id="c" width="1536" height="864"></canvas>
