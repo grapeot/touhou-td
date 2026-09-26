@@ -20,17 +20,20 @@
   .hud b { color: #ffd76a; font-size: 30px; }
   .hud .spacer { flex: 1; }
   .hud button, .hud .gh { pointer-events: auto; }
+  /* One height for every HUD button, whether it holds text or an icon. */
+  .hud button { height: 48px; min-width: 60px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+  #next { min-width: 280px; font-variant-numeric: tabular-nums; }
   .gh { color: #fff8ee; opacity: .75; display: flex; align-items: center; }
   .gh:hover { opacity: 1; color: #ffd76a; }
-  .overlay .src { font-size: 18px; color: #d9a441; }
+  .overlay .src { font-size: 24px; color: #d9a441; }
   button { font: inherit; color: var(--paper); background: #3a1f2cdd; border: 2px solid #d9a441; border-radius: 10px;
     padding: 6px 16px; cursor: pointer; font-size: 22px; }
   button:hover:not(:disabled) { background: #5a2a3c; }
   button:disabled { opacity: .45; cursor: default; }
   .dock { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 14px; align-items: flex-end;
     padding: 12px 18px; background: linear-gradient(#140d1400, #140d14e8); pointer-events: none; }
-  .card { pointer-events: auto; width: 128px; text-align: center; background: #2a1822cc; border: 2px solid #6b4a3a;
-    border-radius: 12px; padding: 4px 4px 6px; cursor: pointer; font-size: 18px; position: relative; }
+  .card { pointer-events: auto; width: 150px; text-align: center; background: #2a1822cc; border: 2px solid #6b4a3a;
+    border-radius: 12px; padding: 4px 4px 6px; cursor: pointer; font-size: 22px; position: relative; }
   .card img { width: 84px; height: 84px; object-fit: contain; display: block; margin: 0 auto; }
   .card.active { border-color: #ffd76a; box-shadow: 0 0 18px #ffd76a88; }
   .card.poor { filter: grayscale(.8) brightness(.7); }
@@ -44,12 +47,13 @@
   .spell.off { filter: grayscale(1) brightness(.5); cursor: default; }
   .dock .spacer { flex: 1; }
   #popup { position: absolute; display: none; background: #2a1822ee; border: 2px solid #d9a441; border-radius: 12px;
-    padding: 10px; font-size: 18px; min-width: 190px; }
-  #popup .row { display: flex; gap: 8px; margin-top: 8px; }
+    padding: 14px 16px; font-size: 26px; min-width: 300px; }
+  #popup .row { display: flex; gap: 12px; margin-top: 12px; }
+  #popup button { font-size: 26px; height: 60px; padding: 0 20px; flex: 1; white-space: nowrap; }
   .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: radial-gradient(#140d14aa, #140d14f2); gap: 18px; text-align: center; }
   .overlay h1 { font-size: 76px; margin: 0; letter-spacing: 8px; color: #fff; text-shadow: 0 0 24px var(--red); }
-  .overlay p { font-size: 22px; margin: 0; opacity: .85; line-height: 1.7; }
+  .overlay p { font-size: 26px; margin: 0; opacity: .85; line-height: 1.7; }
   .overlay button { font-size: 30px; padding: 10px 40px; }
   .overlay .cast { display: flex; gap: 10px; }
   .overlay .cast img { height: 260px; }

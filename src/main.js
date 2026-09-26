@@ -144,6 +144,13 @@ $('next').onclick = () => startWave(g);
 $('pause').onclick = () => setPaused(!paused);
 const ICON_PAUSE = '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="9.5" y="2" width="3.5" height="12" rx="1" fill="currentColor"/></svg>';
 const ICON_PLAY = '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M4 2.2v11.6a.8.8 0 0 0 1.2.7l9.4-5.8a.8.8 0 0 0 0-1.4L5.2 1.5A.8.8 0 0 0 4 2.2z" fill="currentColor"/></svg>';
+// Leaving the tab or locking the phone pauses the game and its music.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && running && g.state !== 'won' && g.state !== 'lost') setPaused(true);
+  else if (document.hidden) bgm?.pause();
+});
+// iOS suspends the audio context after calls or app switches; any tap wakes it again.
+addEventListener('pointerdown', () => { if (AC.state !== 'running') AC.resume(); });
 function setPaused(v) {
   paused = v;
   $('pause').innerHTML = paused ? ICON_PLAY : ICON_PAUSE;
@@ -186,7 +193,7 @@ function showPopup(t) {
   $('sell').textContent = `出售 +${Math.floor(t.spent * 0.7)}`;
   const p = $('popup');
   p.style.display = 'block';
-  p.style.left = `${Math.min(t.x + 50, MAP.width - 220)}px`;
+  p.style.left = `${Math.min(t.x + 50, MAP.width - 340)}px`;
   p.style.top = `${Math.max(t.y - 100, 60)}px`;
 }
 function hidePopup() { $('popup').style.display = 'none'; selectedTower = null; }
@@ -221,6 +228,7 @@ function handleEvents() {
 }
 
 function endScreen(win) {
+  g.freeze = 0; g.sakuyaBoost = 0; g.beams = [];  // don't leave a time-stop frozen on the results screen
   setTimeout(() => {
     $('endTitle').textContent = win ? '异变解决!' : '满身疮痍';
     $('endText').textContent = win
@@ -457,9 +465,10 @@ function render(dt) {
   // Boss HP bar.
   const boss = g.enemies.find((e) => ENEMIES[e.type].boss);
   if (boss) {
-    ctx.fillStyle = '#000a'; ctx.fillRect(468, 70, 600, 16);
-    ctx.fillStyle = '#7fd4ff'; ctx.fillRect(468, 70, 600 * boss.hp / boss.maxHp, 16);
-    ctx.fillStyle = '#fff'; ctx.font = '20px serif'; ctx.textAlign = 'center'; ctx.fillText('琪露诺', 768, 64);
+    ctx.fillStyle = '#000a'; ctx.fillRect(468, 84, 600, 22);
+    ctx.fillStyle = '#7fd4ff'; ctx.fillRect(468, 84, 600 * boss.hp / boss.maxHp, 22);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 18px serif'; ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#0a2a44'; ctx.strokeText('琪露诺', 768, 101); ctx.fillText('琪露诺', 768, 101);
   }
 
   for (const f of floaters) {
@@ -574,4 +583,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // Debug hook for automated browser checks.
-window.__td = { get game() { return g; }, placeTower, startWave, castSpell, TOWERS };
+window.__td = { get game() { return g; }, get music() { return bgm === bossBgm ? 'boss' : bgm?.paused ? 'stopped' : 'stage'; }, get paused() { return paused; }, placeTower, startWave, castSpell, TOWERS };
