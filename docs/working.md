@@ -22,6 +22,9 @@
 - 修复手机横屏时画面边缘被刘海和圆角遮住：按 safe area 缩放居中，并在旋转后和每帧检查尺寸变化时重新适配。
 - 用户反馈两侧仍看不见：缩放基准改为 safe area 与 visual viewport 的交集（页面被缩放或工具栏遮挡时 visual viewport 小于布局视口），舞台改 position: fixed；加 `?debug` 诊断浮层显示各项尺寸。
 
+- 降低手机发热：地图改为画布下的静态 <img>；精灵按显示尺寸预缩放、敌人色调预先算好（不再逐帧 ctx.filter）；光点改用缓存的小画布（不再逐帧建径向渐变）；时停改用半透明蒙层；HUD 只在数值变化时写 DOM；触屏设备限 30 fps，暂停和标题页限 15 fps。`scripts/perf.py --mobile`（4× CPU 降速、Boss 波）主线程忙碌占比 94% → 16%。
+- 暂停键改用 SVG 图标，不用 emoji。
+
 ## Lessons Learned
 
 - 平衡要靠模拟器，不靠截图。第一版数值下只建两座塔也能撑到第七波，画面上完全看不出来。
@@ -32,3 +35,4 @@
 - `node --test tests/` 在 Node 22 上把目录当文件，要写成 `tests/*.test.mjs`。
 - 摆塔位置对胜负影响很小（`worst_pads` 和 `balanced` 差不多），因为几乎每个石台都覆盖两段参道。想让摆位成为决策，需要改地图。
 - `viewport-fit=cover` 会让页面铺到 iPhone 刘海下面，固定比例的舞台必须按 `env(safe-area-inset-*)` 围出的区域缩放；iOS 旋转后 resize 事件里的尺寸可能是旧的，要补 orientationchange、visualViewport 和逐帧检查。
+- 画布性能的大头不在 JS 逻辑（只占 2–5%），在绘制：逐帧 ctx.filter、逐帧 createRadialGradient、全屏大图重绘和 saturation 混合。都能预渲染成小画布复用。

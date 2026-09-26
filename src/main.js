@@ -8,7 +8,7 @@ const ctx = canvas.getContext('2d');
 
 const img = (src) => Object.assign(new Image(), { src });
 const IMG = {
-  map: img('assets/map.jpg'), fairy: img('assets/fairy_chibi.png'), cirno: img('assets/cirno_chibi.png'),
+  fairy: img('assets/fairy_chibi.png'), cirno: img('assets/cirno_chibi.png'),
   reimu: img('assets/reimu_chibi.png'), marisa: img('assets/marisa_chibi.png'), sakuya: img('assets/sakuya_chibi.png'),
   portrait: { reimu: img('assets/reimu_portrait.png'), marisa: img('assets/marisa_portrait.png'), sakuya: img('assets/sakuya_portrait.png'), cirno: img('assets/cirno_portrait.png') },
 };
@@ -142,9 +142,12 @@ document.querySelectorAll('.card').forEach((el) => el.addEventListener('click', 
 document.querySelectorAll('.spell').forEach((el) => el.addEventListener('click', () => castSpell(g, el.dataset.type)));
 $('next').onclick = () => startWave(g);
 $('pause').onclick = () => setPaused(!paused);
+const ICON_PAUSE = '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="9.5" y="2" width="3.5" height="12" rx="1" fill="currentColor"/></svg>';
+const ICON_PLAY = '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M4 2.2v11.6a.8.8 0 0 0 1.2.7l9.4-5.8a.8.8 0 0 0 0-1.4L5.2 1.5A.8.8 0 0 0 4 2.2z" fill="currentColor"/></svg>';
 function setPaused(v) {
   paused = v;
-  $('pause').textContent = paused ? '▶' : '⏸';
+  $('pause').innerHTML = paused ? ICON_PLAY : ICON_PAUSE;
+  $('pause').title = paused ? '继续（P）' : '暂停（P）';
   $('pauseOverlay').classList.toggle('hidden', !paused);
   if (!running || !bgm) return;
   if (paused) bgm.pause(); else bgm.play().catch(() => {});
@@ -236,25 +239,78 @@ function burst(x, y, n, hue, speedMax) {
 }
 
 // ---------------------------------------------------------------- drawing
+// Performance: everything expensive is rendered once into small offscreen canvases and
+// reused. Per-frame ctx.filter, radial gradients and full-size image scaling made phones hot.
+const spriteCache = new Map();
+const TINTS = {
+  // Same matrices as CSS hue-rotate()/saturate()/grayscale(), applied once per sprite.
+  swift: (d) => hueSat(d, 170, 1.4),
+  big: (d) => hueSat(d, -25, 1.3),
+  frozen: (d) => { for (let i = 0; i < d.length; i += 4) { const L = Math.min(255, 1.2 * (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2])); d[i] = d[i + 1] = d[i + 2] = L; } },
+};
+function hueSat(d, deg, sat) {
+  const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+  const m = [0.213 + 0.787 * c - 0.213 * s, 0.715 - 0.715 * c - 0.715 * s, 0.072 - 0.072 * c + 0.928 * s,
+    0.213 - 0.213 * c + 0.143 * s, 0.715 + 0.285 * c + 0.140 * s, 0.072 - 0.072 * c - 0.283 * s,
+    0.213 - 0.213 * c - 0.787 * s, 0.715 - 0.715 * c + 0.715 * s, 0.072 + 0.928 * c + 0.072 * s];
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g2 = d[i + 1], b = d[i + 2];
+    let R = m[0] * r + m[1] * g2 + m[2] * b, G = m[3] * r + m[4] * g2 + m[5] * b, B = m[6] * r + m[7] * g2 + m[8] * b;
+    const L = 0.2126 * R + 0.7152 * G + 0.0722 * B;
+    d[i] = L + (R - L) * sat; d[i + 1] = L + (G - L) * sat; d[i + 2] = L + (B - L) * sat;
+  }
+}
+// Sprite pre-scaled to its on-stage height (and optionally tinted); null until the image loads.
+function sprite(image, h, tint = null) {
+  if (!image.complete || !image.naturalWidth) return null;
+  h = Math.round(h);
+  const key = `${image.src}|${h}|${tint}`;
+  let c = spriteCache.get(key);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.height = h; c.width = Math.round(h * image.naturalWidth / image.naturalHeight);
+    const x = c.getContext('2d');
+    x.imageSmoothingQuality = 'high';
+    x.drawImage(image, 0, 0, c.width, c.height);
+    if (tint) {
+      const data = x.getImageData(0, 0, c.width, c.height);
+      TINTS[tint](data.data);
+      x.putImageData(data, 0, 0);
+    }
+    spriteCache.set(key, c);
+  }
+  return c;
+}
 function drawSprite(image, x, y, h, opts = {}) {
-  if (!image.complete || !image.naturalWidth) return;
-  const w = h * image.naturalWidth / image.naturalHeight;
-  ctx.save();
-  if (opts.filter) ctx.filter = opts.filter;
+  const c = sprite(image, h, opts.tint);
+  if (!c) return;
   if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
-  ctx.translate(x, y);
-  if (opts.flip) ctx.scale(-1, 1);
-  ctx.drawImage(image, -w / 2, -h * 0.85, w, h);
-  ctx.restore();
+  if (opts.flip) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1);
+    ctx.drawImage(c, -c.width / 2, -c.height * 0.85);
+    ctx.restore();
+  } else ctx.drawImage(c, x - c.width / 2, y - c.height * 0.85);
+  ctx.globalAlpha = 1;
 }
 
+const glowCache = new Map();
 function glowDot(x, y, r, hue, core = '#fff') {
-  const grd = ctx.createRadialGradient(x, y, 0, x, y, r * 2.2);
-  grd.addColorStop(0, core);
-  grd.addColorStop(0.35, `hsl(${hue} 100% 65%)`);
-  grd.addColorStop(1, `hsla(${hue} 100% 55% / 0)`);
-  ctx.fillStyle = grd;
-  ctx.beginPath(); ctx.arc(x, y, r * 2.2, 0, Math.PI * 2); ctx.fill();
+  const key = `${Math.round(hue / 15) * 15}|${core}`;
+  let c = glowCache.get(key);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const x2 = c.getContext('2d');
+    const grd = x2.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, core);
+    grd.addColorStop(0.35, `hsl(${hue} 100% 65%)`);
+    grd.addColorStop(1, `hsla(${hue} 100% 55% / 0)`);
+    x2.fillStyle = grd;
+    x2.fillRect(0, 0, 64, 64);
+    glowCache.set(key, c);
+  }
+  const R = r * 2.2;
+  ctx.drawImage(c, x - R, y - R, R * 2, R * 2);
 }
 
 function drawBullet(b) {
@@ -323,9 +379,8 @@ function drawBossDanmaku(dt) {
 
 function render(dt) {
   ctx.save();
+  ctx.clearRect(0, 0, MAP.width, MAP.height);
   if (shake > 0) ctx.translate((Math.random() - 0.5) * 12 * shake, (Math.random() - 0.5) * 12 * shake);
-  if (IMG.map.complete && IMG.map.naturalWidth) ctx.drawImage(IMG.map, 0, 0, MAP.width, MAP.height);
-  else { ctx.fillStyle = '#5a7a4a'; ctx.fillRect(0, 0, MAP.width, MAP.height); }
 
   // Pads: highlight free pads while placing.
   if (selectedType) {
@@ -363,10 +418,9 @@ function render(dt) {
       const def = ENEMIES[e.type];
       const bob = Math.sin(now * 6 + e.wobble) * 4;
       const frozen = g.freeze > 0;
-      const filter = frozen ? 'grayscale(1) brightness(1.2)'
-        : e.type === 'swift' ? 'hue-rotate(170deg) saturate(1.4)' : e.type === 'big' ? 'hue-rotate(-25deg) saturate(1.3)' : null;
-      if (def.boss) drawSprite(IMG.cirno, e.x, e.y + bob, 150, { filter: frozen ? filter : null });
-      else drawSprite(IMG.fairy, e.x, e.y + bob, 72 * (def.scale ?? 1), { filter, flip: true });
+      const tint = frozen ? 'frozen' : (e.type === 'swift' || e.type === 'big') ? e.type : null;
+      if (def.boss) drawSprite(IMG.cirno, e.x, e.y + bob, 150, { tint: frozen ? 'frozen' : null });
+      else drawSprite(IMG.fairy, e.x, e.y + bob, 72 * (def.scale ?? 1), { tint, flip: true });
       if (e.slow > 0 && !frozen) { ctx.fillStyle = '#9fc4ff55'; ctx.beginPath(); ctx.arc(e.x, e.y - 10, def.radius, 0, 7); ctx.fill(); }
       if (!def.boss && e.hp < e.maxHp) {
         const w = 44 * (def.scale ?? 1);
@@ -394,11 +448,8 @@ function render(dt) {
 
   // Time stop: desaturated wash with a clock ring.
   if (g.freeze > 0) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'saturation';
-    ctx.fillStyle = `rgba(128,128,128,${Math.min(1, g.freeze)})`;
+    ctx.fillStyle = `rgba(70,80,110,${0.4 * Math.min(1, g.freeze)})`;
     ctx.fillRect(0, 0, MAP.width, MAP.height);
-    ctx.restore();
     ctx.strokeStyle = '#bcd4ff'; ctx.lineWidth = 6;
     ctx.beginPath(); ctx.arc(768, 432, 300, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * g.freeze / TOWERS.sakuya.spell.duration); ctx.stroke();
   }
@@ -451,27 +502,36 @@ function drawCutin(dt) {
 }
 
 // ---------------------------------------------------------------- HUD
+// DOM writes every frame force style recalculation; only write values that changed.
+const hudCache = new Map();
+function hudSet(el, key, value, apply) {
+  const k = `${el.id || el.dataset.type || el.className}|${key}`;
+  if (hudCache.get(k) === value) return;
+  hudCache.set(k, value);
+  apply(value);
+}
+const CARDS = [...document.querySelectorAll('.card')], SPELLS = [...document.querySelectorAll('.spell')];
+CARDS.forEach((el) => { el.querySelector('.cost').textContent = TOWERS[el.dataset.type].cost; });
+SPELLS.forEach((el) => { const sp = TOWERS[el.dataset.type].spell; el.title = `${sp.name}（冷却 ${sp.cooldown}s）`; });
 function updateHud() {
-  $('gold').textContent = g.gold;
-  $('lives').textContent = g.lives;
-  $('wave').textContent = Math.min(g.wave + 1, WAVES.length);
-  $('next').disabled = g.state !== 'build';
-  $('next').textContent = g.state === 'build' ? `第 ${g.wave + 1} 波 ${Math.ceil(autoTimer)}s · 立即开始` : '波次进行中';
-  document.querySelectorAll('.card').forEach((el) => {
+  hudSet($('gold'), 't', String(g.gold), (v) => { $('gold').textContent = v; });
+  hudSet($('lives'), 't', String(g.lives), (v) => { $('lives').textContent = v; });
+  hudSet($('wave'), 't', String(Math.min(g.wave + 1, WAVES.length)), (v) => { $('wave').textContent = v; });
+  hudSet($('next'), 'd', g.state !== 'build', (v) => { $('next').disabled = v; });
+  hudSet($('next'), 't', g.state === 'build' ? `第 ${g.wave + 1} 波 ${Math.ceil(autoTimer)}s · 立即开始` : '波次进行中',
+    (v) => { $('next').textContent = v; });
+  for (const el of CARDS) {
     const def = TOWERS[el.dataset.type];
-    el.querySelector('.cost').textContent = def.cost;
-    el.classList.toggle('active', selectedType === el.dataset.type);
-    el.classList.toggle('poor', g.gold < def.cost);
-  });
-  document.querySelectorAll('.spell').forEach((el) => {
+    hudSet(el, 'a', selectedType === el.dataset.type, (v) => el.classList.toggle('active', v));
+    hudSet(el, 'p', g.gold < def.cost, (v) => el.classList.toggle('poor', v));
+  }
+  for (const el of SPELLS) {
     const type = el.dataset.type, spell = TOWERS[type].spell;
-    const has = g.towers.some((t) => t.type === type);
-    const frac = g.spellReady[type] / spell.cooldown;
-    el.querySelector('.cd').style.setProperty('--p', `${Math.round(frac * 100)}%`);
-    el.classList.toggle('ready', canCast(g, type));
-    el.classList.toggle('off', !has);
-    el.title = `${spell.name}（冷却 ${spell.cooldown}s）`;
-  });
+    const pct = Math.round(g.spellReady[type] / spell.cooldown * 50) * 2;
+    hudSet(el, 'cd', pct, (v) => el.querySelector('.cd').style.setProperty('--p', `${v}%`));
+    hudSet(el, 'r', canCast(g, type), (v) => el.classList.toggle('ready', v));
+    hudSet(el, 'o', !g.towers.some((t) => t.type === type), (v) => el.classList.toggle('off', v));
+  }
   if (selectedTower && !g.towers.includes(selectedTower)) hidePopup();
   else if (selectedTower) {
     const cost = upgradeCost(selectedTower);
@@ -481,8 +541,14 @@ function updateHud() {
 
 // ---------------------------------------------------------------- loop
 let last = performance.now();
-let realDt = 0;
+let realDt = 0, lastDraw = 0, frameNo = 0;
+const TOUCH = matchMedia('(pointer: coarse)').matches;
 function frame(now) {
+  requestAnimationFrame(frame);
+  const idle = !running || paused || g.state === 'won' || g.state === 'lost';
+  const gap = idle ? 1000 / 15 : TOUCH ? 1000 / 30 : 0;
+  if (now - lastDraw < gap - 2) return;
+  lastDraw = now;
   const real = Math.min(0.05, (now - last) / 1000);
   last = now;
   realDt = real;
@@ -503,8 +569,7 @@ function frame(now) {
   drawBossDanmaku(vis);
   render(vis * scale);
   updateHud();
-  refitIfChanged();
-  requestAnimationFrame(frame);
+  if (++frameNo % 30 === 0) refitIfChanged();  // getBoundingClientRect forces layout; don't do it every frame
 }
 requestAnimationFrame(frame);
 
