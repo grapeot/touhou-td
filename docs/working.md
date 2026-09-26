@@ -17,6 +17,10 @@
 - 加 CI（`npm test` + py_compile）与 GitHub Pages 部署 workflow；右上角加 GitHub 源码图标，标题页加源码链接。
 - 地图图片加载失败时不再每帧抛异常，改画纯色底；smoke 测试服务器加大连接队列，避免并发加载时 connection reset。
 
+### 2026-09-26
+
+- 修复手机横屏时画面边缘被刘海和圆角遮住：按 safe area 缩放居中，并在旋转后和每帧检查尺寸变化时重新适配。
+
 ## Lessons Learned
 
 - 平衡要靠模拟器，不靠截图。第一版数值下只建两座塔也能撑到第七波，画面上完全看不出来。
@@ -26,3 +30,4 @@
 - 短音效做 loudnorm 容易削波；短 cue 用较低 gain 和更低的响度目标。
 - `node --test tests/` 在 Node 22 上把目录当文件，要写成 `tests/*.test.mjs`。
 - 摆塔位置对胜负影响很小（`worst_pads` 和 `balanced` 差不多），因为几乎每个石台都覆盖两段参道。想让摆位成为决策，需要改地图。
+- `viewport-fit=cover` 会让页面铺到 iPhone 刘海下面，固定比例的舞台必须按 `env(safe-area-inset-*)` 围出的区域缩放；iOS 旋转后 resize 事件里的尺寸可能是旧的，要补 orientationchange、visualViewport 和逐帧检查。
