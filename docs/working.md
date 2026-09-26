@@ -20,6 +20,7 @@
 ### 2026-09-26
 
 - 修复手机横屏时画面边缘被刘海和圆角遮住：按 safe area 缩放居中，并在旋转后和每帧检查尺寸变化时重新适配。
+- 用户反馈两侧仍看不见：缩放基准改为 safe area 与 visual viewport 的交集（页面被缩放或工具栏遮挡时 visual viewport 小于布局视口），舞台改 position: fixed；加 `?debug` 诊断浮层显示各项尺寸。
 
 ## Lessons Learned
 

@@ -64,24 +64,52 @@ function reset() {
 // Scale the fixed 1536x864 stage into the safe area (inside the iPhone notch and home
 // indicator). iOS can report stale sizes right after rotation, so also re-check every frame.
 let lastBox = '';
-function fit() {
+// Visible box = safe area ∩ visual viewport (the part of the page actually on screen,
+// which is smaller than the layout viewport when the page is zoomed or toolbars overlap).
+function visibleBox() {
   const r = $('safe').getBoundingClientRect();
-  const w = r.width || innerWidth, h = r.height || innerHeight;
+  let l = r.left, t = r.top, rr = r.right || innerWidth, b = r.bottom || innerHeight;
+  const vv = window.visualViewport;
+  if (vv) {
+    l = Math.max(l, vv.offsetLeft); t = Math.max(t, vv.offsetTop);
+    rr = Math.min(rr, vv.offsetLeft + vv.width); b = Math.min(b, vv.offsetTop + vv.height);
+  }
+  return { l, t, w: Math.max(1, rr - l), h: Math.max(1, b - t) };
+}
+function fit() {
+  const { l, t, w, h } = visibleBox();
   const s = Math.min(w / 1536, h / 864);
   const wrap = $('wrap');
   wrap.style.transformOrigin = '0 0';
   wrap.style.transform = `scale(${s})`;
-  wrap.style.left = `${r.left + (w - 1536 * s) / 2}px`;
-  wrap.style.top = `${r.top + (h - 864 * s) / 2}px`;
-  lastBox = `${r.left},${r.top},${w},${h}`;
+  wrap.style.left = `${l + (w - 1536 * s) / 2}px`;
+  wrap.style.top = `${t + (h - 864 * s) / 2}px`;
+  lastBox = `${l},${t},${w},${h}`;
+  if (DEBUG) {
+    const vv = window.visualViewport, sr = $('safe').getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+    DEBUG.textContent = [
+      `inner ${innerWidth}x${innerHeight}  screen ${screen.width}x${screen.height}  dpr ${devicePixelRatio}`,
+      vv ? `visual ${vv.width.toFixed(0)}x${vv.height.toFixed(0)} @${vv.offsetLeft.toFixed(0)},${vv.offsetTop.toFixed(0)} zoom ${vv.scale.toFixed(2)}` : 'visual n/a',
+      `safe ${sr.left.toFixed(0)},${sr.top.toFixed(0)} ${sr.width.toFixed(0)}x${sr.height.toFixed(0)}`,
+      `fit ${l.toFixed(0)},${t.toFixed(0)} ${w.toFixed(0)}x${h.toFixed(0)}  scale ${s.toFixed(3)}`,
+      `game ${wr.left.toFixed(0)},${wr.top.toFixed(0)} → ${wr.right.toFixed(0)},${wr.bottom.toFixed(0)}`,
+      navigator.userAgent,
+    ].join('\n');
+  }
 }
 function refitIfChanged() {
-  const r = $('safe').getBoundingClientRect();
-  if (`${r.left},${r.top},${r.width || innerWidth},${r.height || innerHeight}` !== lastBox) fit();
+  const { l, t, w, h } = visibleBox();
+  if (`${l},${t},${w},${h}` !== lastBox) fit();
 }
+// ?debug shows the measured sizes, for diagnosing layout on a specific phone.
+const DEBUG = /[?&]debug/.test(location.search)
+  ? document.body.appendChild(Object.assign(document.createElement('pre'), { style:
+    'position:fixed;left:4px;top:4px;z-index:99;margin:0;padding:6px;font:11px monospace;color:#0f0;background:#000c;white-space:pre-wrap;max-width:90vw;pointer-events:none' }))
+  : null;
 addEventListener('resize', fit);
 addEventListener('orientationchange', () => setTimeout(fit, 300));
 window.visualViewport?.addEventListener('resize', fit);
+window.visualViewport?.addEventListener('scroll', fit);
 fit();
 
 function toGame(ev) {
