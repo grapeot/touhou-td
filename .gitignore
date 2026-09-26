@@ -1,0 +1,20 @@
+# secrets / local config
+.env
+.env.*
+!.env.example
+
+# python / node
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+node_modules/
+
+# regenerable intermediates and local artifacts
+assets/raw/
+assets/drafts/
+audio/build/
+audio/specs/
+shots/
+*.wav
+.DS_Store

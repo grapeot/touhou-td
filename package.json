@@ -1,0 +1,10 @@
+{
+  "name": "touhou-td",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "sim": "node scripts/sim.mjs",
+    "serve": "python3 -m http.server 8765"
+  }
+}
