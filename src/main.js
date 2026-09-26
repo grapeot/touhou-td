@@ -285,7 +285,8 @@ function drawBossDanmaku(dt) {
 function render(dt) {
   ctx.save();
   if (shake > 0) ctx.translate((Math.random() - 0.5) * 12 * shake, (Math.random() - 0.5) * 12 * shake);
-  ctx.drawImage(IMG.map, 0, 0, MAP.width, MAP.height);
+  if (IMG.map.complete && IMG.map.naturalWidth) ctx.drawImage(IMG.map, 0, 0, MAP.width, MAP.height);
+  else { ctx.fillStyle = '#5a7a4a'; ctx.fillRect(0, 0, MAP.width, MAP.height); }
 
   // Pads: highlight free pads while placing.
   if (selectedType) {

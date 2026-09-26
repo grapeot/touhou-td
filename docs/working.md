@@ -14,6 +14,8 @@
 - 加自动开波倒计时（首波 15 秒，之后 6 秒）和暂停，暂停时可摆塔。
 - 按 project scaffold 规范整理：`tools/` 改名 `scripts/`，外部工具路径改为环境变量，新增 `tests/`、`docs/`、`AGENTS.md`、`.env.example`。
 - 验证：`npm test` 14 passed；smoke test 无控制台错误；隐私扫描零匹配。
+- 加 CI（`npm test` + py_compile）与 GitHub Pages 部署 workflow；右上角加 GitHub 源码图标，标题页加源码链接。
+- 地图图片加载失败时不再每帧抛异常，改画纯色底；smoke 测试服务器加大连接队列，避免并发加载时 connection reset。
 
 ## Lessons Learned
 
